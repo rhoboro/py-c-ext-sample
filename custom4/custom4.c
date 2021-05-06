@@ -188,7 +188,7 @@ static PyTypeObject CustomType = {
         .tp_doc = "Custom objects",
         .tp_basicsize = sizeof(CustomObject),  // 新しいインスタンス作成時に確保するメモリ量
         .tp_itemsize = 0,  // listやdictなどの可変サイズオブジェクト以外は0
-        // GC用のフラグを追加
+        // https://docs.python.org/ja/3/c-api/typeobj.html#Py_TPFLAGS_HAVE_GC
         .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_GC,
         .tp_new = Custom_new,
         .tp_init = (initproc) Custom_init,
