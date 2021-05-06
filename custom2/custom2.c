@@ -14,16 +14,22 @@ typedef struct _CustomObject {
     int number;
 } CustomObject;
 
+// あとで tp_dealloc に代入する
 static void
 Custom_dealloc(CustomObject *self) {
     Py_XDECREF(self->first);
     Py_XDECREF(self->last);
+    // Py_TYPEが返す型はサブクラスの可能性もある
     Py_TYPE(self)->tp_free((PyObject *) self);
 }
 
+// __new__() になる。typeはサブクラスの可能性もあり。
+// tp_init (__init__()) の呼び出しはインタプリタが行うのでここで行ってはいけない
 static PyObject *
 Custom_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     CustomObject *self;
+    // 失敗時は NULL
+    // tp_alloc は PyType_Ready() がセットしている
     self = ((CustomObject *) type->tp_alloc(type, 0));
     if (self != NULL) {
         self->first = PyUnicode_FromString("");
@@ -41,6 +47,8 @@ Custom_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
     return (PyObject *) self;
 }
 
+// __init__() になる。
+// 戻り値は成功なら0、失敗なら-1で固定
 static int
 Custom_init(CustomObject *self, PyObject *args, PyObject *kwds) {
     static char *kwlist[] = {"first", "last", "number", NULL};
@@ -48,6 +56,8 @@ Custom_init(CustomObject *self, PyObject *args, PyObject *kwds) {
     if (!PyArg_ParseTupleAndKeywords(args, kwds, "|OOi", kwlist, &first, &last, &self->number)) {
         return -1;
     }
+    // tp_init は複数回呼び出しても良いので実装時には注意が必要
+    // 逆に unpickle 時など呼ばれないこともあるのでこちらも注意が必要
     if (first) {
         tmp = self->first;
         Py_INCREF(first);
@@ -95,10 +105,10 @@ static PyTypeObject CustomType = {
         .tp_doc = "Custom objects",
         .tp_basicsize = sizeof(CustomObject),  // 新しいインスタンス作成時に確保するメモリ量
         .tp_itemsize = 0,  // listやdictなどの可変サイズオブジェクト以外は0
-        .tp_flags = Py_TPFLAGS_DEFAULT,  // Python 3.3 までに定義されているすべてのメンバを許可する
+        .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
         .tp_new = Custom_new,
         .tp_init = (initproc) Custom_init,
-        .tp_dealloc = (destructor) Custom_dealloc,
+        .tp_dealloc = (destructor) Custom_dealloc,  // PyObject *を引数に受け取るのでキャストが必要
         .tp_members = Custom_members,
         .tp_methods = Custom_methods,
 };
